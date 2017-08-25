@@ -17,7 +17,7 @@ I preprocessed impages in the database. So for existing pictures in the database
 If a user udpates images in the database, then she can click "preprocess" button to recalculation before start a query. 
 
 
-# 4. How to use your system with step-by-step instructions:    
+# 4. How to use your system with step-by-step instructions    
 1. After open the system, you can use “previous page” and “next page” to select the target picture for a query.     
 2. Click a thumbnail image and then the big images will appear. And the system set the image as a query image.     
 3. All the 100 images are preprocessed and results are stored in text file. After you click the “Intensity”, “Color Code” or “Color Code & Intensity” button, you will to get the query result immediately without waiting.      
