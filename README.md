@@ -5,15 +5,15 @@ This project was to implement a content-based image retrieval system based on 3 
 
 # 3. Challege encountered
 ### 1. How to improve precision?    
-The challege part of this project is how to get a higher precision since the precsion was only 60% using color histogram comparision methods. 
+The challege part of this project is how to get a higher precision since the precsion was only 60% using color histogram comparision methods.     
 Solution: Implement a feature called user feedback, and improved prcision from 60% to 70%. 
 
 # How to run your program:Option   
 1: Download and click the executable “CBIR.jar”Option     
 2: follow the steps as below:    
-1. Open the command prompt    
-2. Set the path to where java jar file is located on your system.     
-3. Type command “java –jar ./CBIR.jar” and press enter.    
+- 1. Open the command prompt    
+- 2. Set the path to where java jar file is located on your system.     
+- 3. Type command “java –jar ./CBIR.jar” and press enter.    
 
 # How to use your system with step-by-step instructions:    
 1. After open the system, you can use “previous page” and “next page” to select the target picture for a query.     
