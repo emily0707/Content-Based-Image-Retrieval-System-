@@ -2,7 +2,9 @@
 This project was to implement a content-based image retrieval system based on 3 different color histogram comparison methods (Intensity, color code and hybird of both) with a relevance feedback option. I also developed a graphic user interface that allows users to browse the image dataset, select the query image, and view the retrieved images. 
 
 # 2. Demo
-
+Download jar file [CBIR.jar](https://github.com/emily0707/Graphic-user-Interface-for-Cancer-Research/blob/master/Content-Based-Image-Retrieval-System-/CBIR.jar ).
+   ![alt text](https://github.com/emily0707/Graphic-user-Interface-for-Cancer-Research/blob/master/images/CBIR.png "Demo ScreenShot")
+   
 # 3. Challege encountered
 ### 1. How to improve precision?    
 The challege part of this project is how to get a higher precision since the precsion was only 60% using color histogram comparision methods.     
