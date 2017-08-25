@@ -3,7 +3,10 @@
 */
 
 import java.awt.Color;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
 import java.awt.GridLayout;
+import java.awt.Insets;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.image.BufferedImage;
@@ -20,12 +23,14 @@ import javax.imageio.ImageIO;
 import javax.swing.BorderFactory;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
+import javax.swing.JCheckBox;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
 
 import javafx.util.Pair;
+
 
 public class CBIR extends JFrame {
 
@@ -35,7 +40,6 @@ public class CBIR extends JFrame {
 	private GridLayout gridLayout1;
 	private GridLayout gridLayout2;
 	private GridLayout gridLayout3;
-	private GridLayout gridLayout4;
 	private JPanel panelBottom1;
 	private JPanel panelTop;
 	private JPanel buttonPanel;
@@ -47,9 +51,12 @@ public class CBIR extends JFrame {
 	private Double[][] colorCodeMatrix = new Double[100][64];
 	private JPhoto[] photo; //creates an array of JPhotos
 
+	private ArrayList<RelevantData> imageRelevance = new ArrayList<RelevantData>();
+
 	int picNo = 0;
 	int imageCount = 1; // keeps up with the number of images displayed since the first page.
 	int pageNo = 1;
+
 
 	public static void main(String args[]) {
 		SwingUtilities.invokeLater(new Runnable() {
@@ -72,7 +79,12 @@ public class CBIR extends JFrame {
 		gridLayout1 = new GridLayout(4, 5, 5, 5);
 		gridLayout2 = new GridLayout(2, 1, 5, 5);
 		gridLayout3 = new GridLayout(1, 2, 5, 5);
-		gridLayout4 = new GridLayout(2, 3, 5, 5);
+
+		GridBagLayout gbl4 = new GridBagLayout();
+		GridBagConstraints gbc = new GridBagConstraints();
+		gbc.insets = new Insets(5, 5, 5, 5);
+		gbc.fill = GridBagConstraints.HORIZONTAL;
+
 		setLayout(gridLayout2);
 		panelBottom1.setLayout(gridLayout1);
 		panelTop.setLayout(gridLayout3);
@@ -83,23 +95,45 @@ public class CBIR extends JFrame {
 		photographLabel.setHorizontalTextPosition(JLabel.CENTER);
 		photographLabel.setHorizontalAlignment(JLabel.CENTER);
 		photographLabel.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
-		buttonPanel.setLayout(gridLayout4);
+		buttonPanel.setLayout(gbl4);
 		panelTop.add(photographLabel);
 
 		panelTop.add(buttonPanel);
 		JButton previousPage = new JButton("Previous Page");
 		JButton nextPage = new JButton("Next Page");
 		JButton reset = new JButton("Reset");
-		JButton intensity = new JButton("Search by Intensity");
-		JButton colorCode = new JButton("Search by Color Code");
+		JButton intensity = new JButton("Intensity");
+		JButton colorCode = new JButton("Color Code");
+		JButton colorCodeIntensity = new JButton("Color Code and Intensity");
 		JButton preprocess = new JButton("PreProcess");
+		JCheckBox relevantCheckBox = new JCheckBox("Relevant");
 
-		buttonPanel.add(intensity);
-		buttonPanel.add(colorCode);
-		buttonPanel.add(preprocess);
-		buttonPanel.add(previousPage);
-		buttonPanel.add(nextPage);
-		buttonPanel.add(reset);
+		gbc.gridx = 0;
+		gbc.gridy = 0;
+		buttonPanel.add(intensity, gbc);
+		gbc.gridx = 1;
+		gbc.gridy = 0;
+		buttonPanel.add(colorCode, gbc);
+		gbc.gridx = 0;
+		gbc.gridy = 1;
+		buttonPanel.add(colorCodeIntensity, gbc);
+		gbc.gridx = 1;
+		gbc.gridy = 1;
+		buttonPanel.add(relevantCheckBox, gbc);
+		gbc.gridx = 0;
+		gbc.gridy = 2;
+		buttonPanel.add(preprocess, gbc);
+		gbc.gridx = 1;
+		gbc.gridy = 2;
+		buttonPanel.add(reset, gbc);
+		gbc.gridx = 0;
+		gbc.gridy = 3;
+		buttonPanel.add(previousPage, gbc);
+		gbc.gridx = 1;
+		gbc.gridy = 3;
+		buttonPanel.add(nextPage, gbc);
+
+
 
 		nextPage.addActionListener(new nextPageHandler());
 		previousPage.addActionListener(new previousPageHandler());
@@ -107,6 +141,8 @@ public class CBIR extends JFrame {
 		colorCode.addActionListener(new colorCodeHandler());
 		reset.addActionListener(new resetButtonHandler());
 		preprocess.addActionListener(new preprocessButtonHandler());
+		colorCodeIntensity.addActionListener(new colorCodeAndIntensityHandler());
+		relevantCheckBox.addActionListener(new RelevantCheckButtonHandler());
 		setSize(1100, 750);
 		// this centers the frame on the screen
 		setLocationRelativeTo(null);
@@ -123,6 +159,7 @@ public class CBIR extends JFrame {
 			if (icon != null) {
 				photo[i] = new JPhoto(i + ".jpg", icon);
 				photo[i].getImageButton().addActionListener(new IconButtonHandler(i, icon));
+				photo[i].getCheckBox().addActionListener(new ImageRelevantCheckButtonHandler(i));
 				buttonOrder[i] = i;
 			}
 		}
@@ -130,10 +167,21 @@ public class CBIR extends JFrame {
 		if (null == getClass().getResource("images/intensity.txt")) {
 			DoPreprocess();
 		} else {
-			readIntensityDistanceFile();
-			readcolorCodeDistanceFile();
+			this.readColorCodeFile();
+			this.readIntensityFile();
+			// readIntensityDistanceFile();
+			// readcolorCodeDistanceFile();
 		}
 
+		for (int i = 0; i < 100; ++i) {
+			RelevantData r = new RelevantData((i + 1) + ".jpg");
+
+			r.AddCodeCodeFeatures(this.colorCodeMatrix[i]);
+			r.AddIntensityFeatures(this.intensityMatrix[i]);
+			this.imageRelevance.add(r);
+		}
+
+		RelevantData.CalcNormalizedFeatures(this.imageRelevance);
 		displayFirstPage();
 	}
 
@@ -211,7 +259,7 @@ public class CBIR extends JFrame {
 		Scanner read;
 		String line = "";
 		int lineNumber = 0;
-		read = new Scanner(getClass().getResourceAsStream("images/colorCodes.txt"));
+		read = new Scanner(getClass().getResourceAsStream("images/ColorCodes.txt"));
 		while (read.hasNextLine()) {
 			line = read.nextLine();
 			String[] tokens = line.split(",");
@@ -320,6 +368,51 @@ public class CBIR extends JFrame {
 			picNo = pNo;
 		}
 
+	}
+
+	/*
+	 * This class implements an ActionListener for each iconButton. When an icon
+	 * button is clicked, the image on the button is added to the
+	 * photographLabel and the picNo is set to the image number selected and
+	 * being displayed.
+	 */
+	private class ImageRelevantCheckButtonHandler implements ActionListener {
+		int imageIndex = 0;
+
+		ImageRelevantCheckButtonHandler(int i) {
+			imageIndex = i;
+		}
+
+		public void actionPerformed(ActionEvent e) {
+			imageRelevance.get(picNo - 1).AddRelevantImage(imageRelevance.get(this.imageIndex - 1));
+			imageRelevance.get(picNo - 1).CalcNormalizedWeight();
+		}
+	}
+
+	/*
+	 * This class implements an ActionListener for each iconButton. When an icon
+	 * button is clicked, the image on the button is added to the
+	 * photographLabel and the picNo is set to the image number selected and
+	 * being displayed.
+	 */
+	private class RelevantCheckButtonHandler implements ActionListener {
+
+		boolean selected = false;
+
+		RelevantCheckButtonHandler() {
+
+		}
+
+		public void actionPerformed(ActionEvent e) {
+
+			for (int i = 1; i < 101; ++i) {
+				photo[i].getCheckBox().setSelected(false);
+				photo[i].getCheckBox().setVisible(!selected);
+			}
+			selected = !selected;
+			photo[picNo].getCheckBox().setSelected(true);
+			displayFirstPage();
+		}
 	}
 
 	/*
@@ -441,102 +534,6 @@ public class CBIR extends JFrame {
 		bw.close();
 	}
 
-	   /*
-     * This method calculate the Manhattan distances and use a ArrayList to sort distances to 
-     * get the right order of picture indexes. Then writes the sorted picture indexes (search result) 
-     * to text file  intensity-distances.txt
-     */
-	private void generateIntensityDistanceFile() throws IOException, URISyntaxException {
-		String workingdirectory = System.getProperty("user.dir");
-        
-        File file = new File(workingdirectory + "/intensity-distances.txt");
-        if (!file.exists()) {
-            file.createNewFile();
-        }
-        
-		FileWriter fw = new FileWriter(file.getAbsoluteFile());
-		BufferedWriter bw = new BufferedWriter(fw);
-		for (int iFile = 0; iFile < 100; ++iFile) {
-			//BufferedImage iImage = ImageIO.read(new File("bin/images/" + (iFile + 1) + ".jpg"));
-		    BufferedImage iImage = ImageIO.read(getClass().getResourceAsStream("images/" + (iFile + 1) + ".jpg"));//new File("bin/images//" + iFile + ".jpg"));
-	           
-			int iPixels = iImage.getWidth() * iImage.getHeight();
-			//use arrayList with pair object to hold both distances value and picture index. 
-			ArrayList<Pair<Double, Integer>> distances = new ArrayList<Pair<Double, Integer>>();
-
-			for (int jFile = 0; jFile < 100; ++jFile) {
-				//BufferedImage jImage = ImageIO.read(new File("bin/images/" + (jFile + 1) + ".jpg"));
-			    BufferedImage jImage = ImageIO.read(getClass().getResourceAsStream("images/" + (jFile + 1)  + ".jpg"));
-				int jPixels = jImage.getWidth() * jImage.getHeight();
-				Double d1 = calculateManhattanDistance(iPixels, intensityMatrix[iFile], jPixels,
-						intensityMatrix[jFile]);
-				distances.add(new Pair<Double, Integer>(d1, jFile + 1));
-			}
-            //sort the ArrayList base on value of  distances in non-decreasing order.
-			distances.sort(new Comparator<Pair<Double, Integer>>() {
-				@Override
-				public int compare(Pair<Double, Integer> o1, Pair<Double, Integer> o2) {
-					return o1.getKey().compareTo(o2.getKey());
-				}
-			});
-            //write the sorted index to intensity-distances.txt. 
-			for (int i = 0; i < distances.size(); ++i) {
-				bw.write(Integer.toString(distances.get(i).getValue()));
-				bw.write(",");
-			}
-			bw.newLine();
-			bw.flush();
-		}
-		bw.close();
-	}
-	
-	
-    /*
-  * This method read pictures to process and then use a ArrayList to sort distances to 
-  * get the right order of picture indexes. Then writes the sorted picture indexes (search result) 
-  * to text file  colorcode-distances.txt
-  */
-	private void generateColorCodeDistanceFile() throws IOException, URISyntaxException {
-
-        String workingdirectory = System.getProperty("user.dir");
-        
-        File file = new File(workingdirectory + "/colorcode-distances.txt");
-        if (!file.exists()) {
-            file.createNewFile();
-        }
-
-		FileWriter fw = new FileWriter(file.getAbsoluteFile());
-		BufferedWriter bw = new BufferedWriter(fw);
-		for (int iFile = 0; iFile < 100; ++iFile) {
-		    BufferedImage iImage = ImageIO.read(getClass().getResourceAsStream("images/" + (iFile + 1) + ".jpg"));//new File("bin/images//" + iFile + ".jpg"));
-            int iPixels = iImage.getWidth() * iImage.getHeight();
-			//use arrayList with pair object to hold both distances value and picture index. 
-			ArrayList<Pair<Double, Integer>> distances = new ArrayList<Pair<Double, Integer>>();
-			for (int jFile = 0; jFile < 100; ++jFile) {
-			    BufferedImage jImage = ImageIO.read(getClass().getResourceAsStream("images/" + (jFile + 1)  + ".jpg"));
-                int jPixels = jImage.getWidth() * jImage.getHeight();
-				Double d1 = calculateManhattanDistance(iPixels, colorCodeMatrix[iFile], jPixels,
-						colorCodeMatrix[jFile]);
-				distances.add(new Pair<Double, Integer>(d1, jFile + 1));
-			}
-            //sort the ArrayList base on value of  distances in non-decreasing order.
-			distances.sort(new Comparator<Pair<Double, Integer>>() {
-				@Override
-				public int compare(Pair<Double, Integer> o1, Pair<Double, Integer> o2) {
-					return o1.getKey().compareTo(o2.getKey());
-				}
-			});
-            //write the sorted index to intensity-distances.txt. 
-			for (int i = 0; i < distances.size(); ++i) {
-				bw.write(Integer.toString(distances.get(i).getValue()));
-				bw.write(",");
-			}
-			bw.newLine();
-			bw.flush();
-		}
-		bw.close();
-	}
-
 	
 	 //This method calculate the Manhattan distances.
 	Double calculateManhattanDistance(int iPixels, Double[] Hi, int kPixels, Double[] Hk) {
@@ -556,11 +553,47 @@ public class CBIR extends JFrame {
 	 */
 	private class intensityHandler implements ActionListener {
 		public void actionPerformed(ActionEvent e) {
-			for (int i = 0; i < 100; ++i) {
-				buttonOrder[i + 1] = intensityIndexes[picNo - 1][i];
+			BufferedImage iImage = null;
+			try {
+
+				iImage = ImageIO.read(new File(getClass().getResource("images/" + picNo + ".jpg").toURI()));
+			} catch (IOException | URISyntaxException e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
 			}
+
+			int iPixels = iImage.getWidth() * iImage.getHeight();
+			ArrayList<Pair<Double, Integer>> distances = new ArrayList<Pair<Double, Integer>>();
+
+			for (int k = 0; k < 100; ++k) {
+				try {
+					BufferedImage kImage = ImageIO
+							.read(new File(getClass().getResource("images/" + (k + 1) + ".jpg").toURI()));
+					int kPixels = kImage.getHeight() * kImage.getWidth();
+					Double d1 = calculateManhattanDistance(iPixels, intensityMatrix[picNo - 1], kPixels,
+							intensityMatrix[k]);
+					distances.add(new Pair<Double, Integer>(d1, k + 1));
+				} catch (IOException | URISyntaxException e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				}
+			}
+
+			distances.sort(new Comparator<Pair<Double, Integer>>() {
+				@Override
+				public int compare(Pair<Double, Integer> o1, Pair<Double, Integer> o2) {
+					return o1.getKey().compareTo(o2.getKey());
+				}
+			});
+
+			for (int i = 0; i < distances.size(); ++i) {
+				buttonOrder[i + 1] = distances.get(i).getValue();
+			}
+
 			imageCount = 1;
 			displayFirstPage();
+
+		
 		}
 
 	}
@@ -571,17 +604,78 @@ public class CBIR extends JFrame {
      * and display base on this sequence. The images are then arranged from most 
      * similar to the least. 
      */
-	private class colorCodeHandler implements ActionListener {
-		public void actionPerformed(ActionEvent e) {			
-			for (int i = 0; i < 100; ++i) {
-				buttonOrder[i + 1] = colorCodeIndexes[picNo - 1][i];
+	private class colorCodeAndIntensityHandler implements ActionListener {
+		public void actionPerformed(ActionEvent e) {
+
+			ArrayList<Pair<Double, Integer>> distances = new ArrayList<Pair<Double, Integer>>();
+
+			for (int k = 0; k < 100; ++k) {
+				Double d1 = imageRelevance.get(picNo - 1).CalcWeightedDistance(imageRelevance.get(k));
+				distances.add(new Pair<Double, Integer>(d1, k + 1));
 			}
+
+			distances.sort(new Comparator<Pair<Double, Integer>>() {
+				@Override
+				public int compare(Pair<Double, Integer> o1, Pair<Double, Integer> o2) {
+					return o1.getKey().compareTo(o2.getKey());
+				}
+			});
+
+			for (int i = 0; i < distances.size(); ++i) {
+				buttonOrder[i + 1] = distances.get(i).getValue();
+			}
+
 			imageCount = 1;
 			displayFirstPage();
+
 		}
 	}
 
-	
+	private class colorCodeHandler implements ActionListener {
+		public void actionPerformed(ActionEvent e) {			
+			BufferedImage iImage = null;
+			try {
+
+				iImage = ImageIO.read(new File(getClass().getResource("images/" + picNo + ".jpg").toURI()));
+			} catch (IOException | URISyntaxException e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			}
+
+			int iPixels = iImage.getWidth() * iImage.getHeight();
+			ArrayList<Pair<Double, Integer>> distances = new ArrayList<Pair<Double, Integer>>();
+
+			for (int k = 0; k < 100; ++k) {
+				try {
+					BufferedImage kImage = ImageIO
+							.read(new File(getClass().getResource("images/" + (k + 1) + ".jpg").toURI()));
+					int kPixels = kImage.getHeight() * kImage.getWidth();
+					Double d1 = calculateManhattanDistance(iPixels, colorCodeMatrix[picNo - 1], kPixels,
+							colorCodeMatrix[k]);
+					distances.add(new Pair<Double, Integer>(d1, k + 1));
+				} catch (IOException | URISyntaxException e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				}
+			}
+
+			distances.sort(new Comparator<Pair<Double, Integer>>() {
+				@Override
+				public int compare(Pair<Double, Integer> o1, Pair<Double, Integer> o2) {
+					return o1.getKey().compareTo(o2.getKey());
+				}
+			});
+
+			for (int i = 0; i < distances.size(); ++i) {
+				buttonOrder[i + 1] = distances.get(i).getValue();
+			}
+
+			imageCount = 1;
+			displayFirstPage();
+
+		}
+	}
+
     /*
      * This class implements an ActionListener when the user selects the
      * reset button. it will set the system back to original state. 
@@ -603,9 +697,9 @@ public class CBIR extends JFrame {
 		try {
 			generateColorCodeFile();
 			generateIntensityFile();
-			generateIntensityDistanceFile();
-			generateColorCodeDistanceFile();
-		} catch (IOException | URISyntaxException e1) {
+			//generateIntensityDistanceFile();
+			//generateColorCodeDistanceFile();
+		} catch (IOException e1) {
 			// TODO Auto-generated catch block
 			e1.printStackTrace();
 		}
