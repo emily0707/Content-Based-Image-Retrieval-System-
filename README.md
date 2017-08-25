@@ -8,7 +8,14 @@ Download jar file [CBIR.jar](https://github.com/emily0707/Graphic-user-Interface
 # 3. Challege encountered
 ### 1. How to improve precision?    
 The challege part of this project is how to get a higher precision since the precsion was only 60% using color histogram comparision methods.     
-Solution: Implement a feature called user feedback, and improved prcision from 60% to 70%. 
+** Solution : Implement a feature called user feedback, and improved prcision from 60% to 70%. **
+// to be contiune, how to calcalute user feedback........
+### 2. How to improve performance?   
+Becasue color histograms comparation methods invovles a lot of calculation. Becuase before providing users the query results, first the program has to generate intensity, color-code, hybird data and serach result indexes for each picture. It takes 5-10 minutes to run the calculation. Which is not user-friendly. 
+**Solution: add a preprocess feature enables users get query results immediately.  **
+I preprocessed impages in the database. So for existing pictures in the database, after choosing a query image, users can get results immediatly.      
+If a user udpates images in the database, then she can click "preprocess" button to recalculation before start a query. 
+
 
 # How to run your program:Option   
 1: Download and click the executable “CBIR.jar”Option     
